@@ -1,0 +1,8 @@
+{
+  "Nickname": "Arrow Damage Scaling",
+  "Visibility": "Visible",
+  "OneLineDescription": "Makes Perks, Enchantments, Potions, Archery Level and other bow damage increasing effects also affect arrow damage, so that stronger arrows are still useful in the late game.",
+  "LongDescription": "",
+  "PreferredAutoVersioning": "Default",
+  "RequiredMods": []
+}
