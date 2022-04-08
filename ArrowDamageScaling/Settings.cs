@@ -24,9 +24,13 @@ namespace ArrowDamageScaling {
 
     public class Balancing {
         [SynthesisTooltip("Additive modifier for arrow damage applied before all other modifiers.")]
-        public float initialOffset = 0f;
+        public float arrowDamageOffset = 0f;
         [SynthesisTooltip("Multiplicative modifier for arrow damage.")]
-        public float factor = 1f;
+        public float arrowDamageFactor = 1f;
+        [SynthesisTooltip("Additive modifier for bow damage applied before all other modifiers.")]
+        public float bowDamageOffset = 0f;
+        [SynthesisTooltip("Multiplicative modifier for bow damage.")]
+        public float bowDamageFactor = 1f;
     }
 
     public class Settings {

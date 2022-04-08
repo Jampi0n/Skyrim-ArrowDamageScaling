@@ -490,28 +490,28 @@ namespace ArrowDamageScaling {
             /*
              * Factor for arrow damage.
              */
-            if(settings.balancing.factor != 1f) {
+            if(settings.balancing.arrowDamageFactor != 1f) {
                 dummyEffects.Add(new PerkEntryPointModifyValue() {
                     EntryPoint = APerkEntryPointEffect.EntryType.ModAttackDamage,
                     Modification = PerkEntryPointModifyValue.ModificationType.Multiply,
                     Priority = 0,
                     Rank = 0,
                     PerkConditionTabCount = 3,
-                    Value = settings.balancing.factor
+                    Value = settings.balancing.arrowDamageFactor
                 });
             }
 
             /*
              * Initial offset for arrow damage.
              */
-            if(settings.balancing.initialOffset != 0f) {
+            if(settings.balancing.arrowDamageOffset != 0f) {
                 dummyEffects.Add(new PerkEntryPointModifyValue() {
                     EntryPoint = APerkEntryPointEffect.EntryType.ModAttackDamage,
                     Modification = PerkEntryPointModifyValue.ModificationType.Add,
                     Priority = 255,
                     Rank = 0,
                     PerkConditionTabCount = 3,
-                    Value = settings.balancing.initialOffset
+                    Value = settings.balancing.arrowDamageOffset
                 });
             }
 
@@ -531,6 +531,72 @@ namespace ArrowDamageScaling {
             // Remove dummy effects from player only perk.
             foreach(var effect in dummyEffects) {
                 skillScalingPerk!.Effects.Remove(effect);
+            }
+
+            /*
+             * Factor for bow damage.
+             */
+            if(settings.balancing.bowDamageFactor != 1f) {
+                var entryPoint = new PerkEntryPointModifyValue() {
+                    EntryPoint = APerkEntryPointEffect.EntryType.ModAttackDamage,
+                    Modification = PerkEntryPointModifyValue.ModificationType.Multiply,
+                    Priority = 0,
+                    Rank = 0,
+                    PerkConditionTabCount = 3,
+                    Value = settings.balancing.bowDamageFactor
+                };
+                if(settings.PlayerOnly) {
+                    AddPlayerCondition(entryPoint);
+                }
+                entryPoint.Conditions.Add(new PerkCondition() {
+                    RunOnTabIndex = 1,
+                    Conditions = new Noggog.ExtendedList<Condition>() {
+                        new ConditionFloat() {
+                            CompareOperator = CompareOperator.EqualTo,
+                            ComparisonValue = 1f,
+                            Data = new FunctionConditionData() {
+                                Function = Condition.Function.HasKeyword,
+                                ParameterOneRecord = Skyrim.Keyword.WeapTypeBow,
+                                RunOnType = Condition.RunOnType.Subject
+                            }
+                        }
+                    }
+                });
+                skillScalingPerk = state.PatchMod.Perks.GetOrAddAsOverride(playerPerk.Resolve(state.LinkCache));
+                skillScalingPerk.Effects.Add(entryPoint);
+            }
+
+            /*
+             * Initial offset for bow damage.
+             */
+            if(settings.balancing.bowDamageOffset != 0f) {
+                var entryPoint = new PerkEntryPointModifyValue() {
+                    EntryPoint = APerkEntryPointEffect.EntryType.ModAttackDamage,
+                    Modification = PerkEntryPointModifyValue.ModificationType.Add,
+                    Priority = 255,
+                    Rank = 0,
+                    PerkConditionTabCount = 3,
+                    Value = settings.balancing.bowDamageOffset
+                };
+                if(settings.PlayerOnly) {
+                    AddPlayerCondition(entryPoint);
+                }
+                entryPoint.Conditions.Add(new PerkCondition() {
+                    RunOnTabIndex = 1,
+                    Conditions = new Noggog.ExtendedList<Condition>() {
+                        new ConditionFloat() {
+                            CompareOperator = CompareOperator.EqualTo,
+                            ComparisonValue = 1f,
+                            Data = new FunctionConditionData() {
+                                Function = Condition.Function.HasKeyword,
+                                ParameterOneRecord = Skyrim.Keyword.WeapTypeBow,
+                                RunOnType = Condition.RunOnType.Subject
+                            }
+                        }
+                    }
+                });
+                skillScalingPerk = state.PatchMod.Perks.GetOrAddAsOverride(playerPerk.Resolve(state.LinkCache));
+                skillScalingPerk.Effects.Add(entryPoint);
             }
         }
     }
