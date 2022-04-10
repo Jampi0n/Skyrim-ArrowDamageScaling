@@ -11,6 +11,31 @@ using Mutagen.Bethesda.Plugins;
 namespace ArrowDamageScaling {
     public static class InvertPerk {
 
+
+        public static float infinity = 0x10000;
+        public static float zero = 1f / infinity;
+
+        public static bool IsInfinity(double? x) {
+            return Math.Abs(x.GetValueOrDefault(0)) >= infinity;
+        }
+        public static bool IsZero(double? x) {
+            return Math.Abs(x.GetValueOrDefault(0)) <= zero;
+        }
+        public static float EnsureBounds(float? x) {
+            double tmp = x.GetValueOrDefault(0);
+            if(IsInfinity(tmp)) {
+                return Math.Sign(tmp) * infinity;
+            }
+            if(IsZero(tmp)) {
+                if(Math.Sign(tmp) == 0) {
+                    return zero;
+                } else {
+                    return Math.Sign(tmp) * zero;
+                }
+            }
+            return (float) tmp;
+        }
+
         /// <summary>
         /// Returns an actor value free copy of an actor value perk entry point.
         /// </summary>
@@ -82,21 +107,27 @@ namespace ArrowDamageScaling {
         /// Adjusts the perk entry points scaleAllEffect and scaleNonArrow, so they correctly modify only arrow damage. The resulting perk entry points ar eadded to addedEffects.
         /// </summary>
         /// <param name="addedEffects">An empty list that is used to hold additional return values. Entry points in this list must be added to the perk.</param>
-        /// <param name="scaleAllEffect">The perk entry point that scales all weapon damage.</param>
+        /// <param name="scaleAll">The perk entry point that scales all weapon damage.</param>
         /// <param name="scaleNonArrow">The perk entry point that scales all non arrow damage.</param>
         /// <returns>Returns true, if adjustint was succesful.</returns>
-        public static bool Invert(List<APerkEffect> addedEffects, APerkEntryPointEffect scaleAllEffect, APerkEntryPointEffect scaleNonArrow) {
-            if(scaleNonArrow is PerkEntryPointModifyValue modifyValue) {
-                switch(modifyValue.Modification) {
+        public static bool Invert(List<APerkEffect> addedEffects, APerkEntryPointEffect scaleAll, APerkEntryPointEffect scaleNonArrow) {
+            if(scaleNonArrow is PerkEntryPointModifyValue scaleNonArrowModifyValue && scaleAll is PerkEntryPointModifyValue scaleAllModifyValue) {
+                switch(scaleNonArrowModifyValue.Modification) {
                     case PerkEntryPointModifyValue.ModificationType.Add: {
-                        modifyValue.Value *= -1;
-                        addedEffects.Add(scaleAllEffect);
+                        if(IsZero(scaleNonArrowModifyValue.Value)) {
+                            // There is no damage modification
+                            return false;
+                        }
+                        scaleNonArrowModifyValue.Value *= -1;
+                        addedEffects.Add(scaleAll);
                         addedEffects.Add(scaleNonArrow);
                         return true;
                     }
                     case PerkEntryPointModifyValue.ModificationType.Multiply: {
-                        modifyValue.Value = 1f / modifyValue.Value;
-                        addedEffects.Add(scaleAllEffect);
+                        scaleAllModifyValue.Value = EnsureBounds(scaleAllModifyValue.Value);
+                        scaleNonArrowModifyValue.Value = EnsureBounds(1f / scaleNonArrowModifyValue.Value);
+                        
+                        addedEffects.Add(scaleAll);
                         addedEffects.Add(scaleNonArrow);
                         return true;
                     }
@@ -119,11 +150,15 @@ namespace ArrowDamageScaling {
                 thresholds[i] = (int)(maximum / (numEntryPoints - 1f) * i);
                 actorValues[i] = thresholds[i];
             }
-            if(scaleNonArrow is PerkEntryPointModifyActorValue modifyActorValue) {
-                switch(modifyActorValue.Modification) {
+            if(scaleNonArrow is PerkEntryPointModifyActorValue scaleNonArrowModifyActorValue && scaleAll is PerkEntryPointModifyActorValue scaleAllModifyActorValue) {
+                switch(scaleNonArrowModifyActorValue.Modification) {
                     case PerkEntryPointModifyActorValue.ModificationType.AddAVMult: {
-                        modifyActorValue.Value *= -1;
-                        addedEffects.Add(scaleAllEffect);
+                        if(IsZero(scaleNonArrowModifyActorValue.Value)) {
+                            // There is no damage modification
+                            return false;
+                        }
+                        scaleNonArrowModifyActorValue.Value *= -1;
+                        addedEffects.Add(scaleAll);
                         addedEffects.Add(scaleNonArrow);
                         return true;
                     }
@@ -134,18 +169,18 @@ namespace ArrowDamageScaling {
                             var scaleNonArrowList = new PerkEntryPointModifyValue[numEntryPoints];
 
                             for(int i = 0; i < numEntryPoints; ++i) {
-                                scaleAllList[i] = GetModifyValueEntryPoint((PerkEntryPointModifyActorValue)scaleAllEffect);
-                                scaleNonArrowList[i] = GetModifyValueEntryPoint(modifyActorValue);
-                                AddActorValueConditions(scaleAllList[i], modifyActorValue.ActorValue, thresholds[i], thresholds[i + 1]);
-                                AddActorValueConditions(scaleNonArrowList[i], modifyActorValue.ActorValue, thresholds[i], thresholds[i + 1]);
+                                scaleAllList[i] = GetModifyValueEntryPoint((PerkEntryPointModifyActorValue)scaleAll);
+                                scaleNonArrowList[i] = GetModifyValueEntryPoint(scaleNonArrowModifyActorValue);
+                                AddActorValueConditions(scaleAllList[i], scaleNonArrowModifyActorValue.ActorValue, thresholds[i], thresholds[i + 1]);
+                                AddActorValueConditions(scaleNonArrowList[i], scaleNonArrowModifyActorValue.ActorValue, thresholds[i], thresholds[i + 1]);
                                 scaleAllList[i].Modification = PerkEntryPointModifyValue.ModificationType.Multiply;
-                                scaleAllList[i].Value = Math.Min(1, actorValues[i]) * modifyActorValue.Value;
+                                scaleAllList[i].Value = EnsureBounds(actorValues[i] * scaleNonArrowModifyActorValue.Value);
                                 scaleNonArrowList[i].Modification = PerkEntryPointModifyValue.ModificationType.Multiply;
-                                scaleNonArrowList[i].Value = 1f / (Math.Min(1, actorValues[i]) * modifyActorValue.Value);
-                                if(Math.Abs((double)scaleAllList[i].Value! - 1) > 0.01) {
+                                scaleNonArrowList[i].Value = EnsureBounds(1f / scaleAllList[i].Value);
+                                if(!IsZero(scaleAllList[i].Value - 1)) {
                                     addedEffects.Add(scaleAllList[i]);
                                 }
-                                if(Math.Abs((double)scaleNonArrowList[i].Value! - 1) > 0.01) {
+                                if(!IsZero(scaleNonArrowList[i].Value - 1)) {
                                     addedEffects.Add(scaleNonArrowList[i]);
                                 }
                             }
@@ -156,24 +191,28 @@ namespace ArrowDamageScaling {
 
                     }
                     case PerkEntryPointModifyActorValue.ModificationType.MultiplyOnePlusAVMult: {
+                        if(IsZero(scaleNonArrowModifyActorValue.Value)) {
+                            // There is no damage modification
+                            return false;
+                        }
                         // emulate
                         if(emulate) {
                             var scaleAllList = new PerkEntryPointModifyValue[numEntryPoints];
                             var scaleNonArrowList = new PerkEntryPointModifyValue[numEntryPoints];
 
                             for(int i = 0; i < numEntryPoints; ++i) {
-                                scaleAllList[i] = GetModifyValueEntryPoint((PerkEntryPointModifyActorValue)scaleAllEffect);
-                                scaleNonArrowList[i] = GetModifyValueEntryPoint(modifyActorValue);
-                                AddActorValueConditions(scaleAllList[i], modifyActorValue.ActorValue, thresholds[i], thresholds[i + 1]);
-                                AddActorValueConditions(scaleNonArrowList[i], modifyActorValue.ActorValue, thresholds[i], thresholds[i + 1]);
+                                scaleAllList[i] = GetModifyValueEntryPoint((PerkEntryPointModifyActorValue)scaleAll);
+                                scaleNonArrowList[i] = GetModifyValueEntryPoint(scaleNonArrowModifyActorValue);
+                                AddActorValueConditions(scaleAllList[i], scaleNonArrowModifyActorValue.ActorValue, thresholds[i], thresholds[i + 1]);
+                                AddActorValueConditions(scaleNonArrowList[i], scaleNonArrowModifyActorValue.ActorValue, thresholds[i], thresholds[i + 1]);
                                 scaleAllList[i].Modification = PerkEntryPointModifyValue.ModificationType.Multiply;
-                                scaleAllList[i].Value = 1 + actorValues[i] * modifyActorValue.Value;
+                                scaleAllList[i].Value = EnsureBounds(1 + actorValues[i] * scaleNonArrowModifyActorValue.Value);
                                 scaleNonArrowList[i].Modification = PerkEntryPointModifyValue.ModificationType.Multiply;
-                                scaleNonArrowList[i].Value = 1f / (1 + actorValues[i] * modifyActorValue.Value);
-                                if(Math.Abs((double)scaleAllList[i].Value! - 1) > 0.01) {
+                                scaleNonArrowList[i].Value = EnsureBounds(1f / scaleAllList[i].Value);
+                                if(!IsZero(scaleAllList[i].Value - 1)) {
                                     addedEffects.Add(scaleAllList[i]);
                                 }
-                                if(Math.Abs((double)scaleNonArrowList[i].Value! - 1) > 0.01) {
+                                if(!IsZero(scaleNonArrowList[i].Value - 1)) {
                                     addedEffects.Add(scaleNonArrowList[i]);
                                 }
                             }
