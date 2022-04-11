@@ -37,6 +37,8 @@ namespace ArrowDamageScaling {
         [SynthesisTooltip("Arrow damage is only modified for the player.")]
         public bool PlayerOnly = true;
 
+        [SynthesisTooltip("How much arrow damage is scaled relative to bow damage. 1.0 means same scaling. 0.5 means, if bow damage is multiplied by 4, arrow damage is only multiplied by 2.")]
+        public float ScalingFactor = 1.0f;
 
         public EmulateActorValueEntryPoints emulateActorValueEntryPoints = new();
 

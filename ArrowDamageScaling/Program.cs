@@ -21,7 +21,7 @@ namespace ArrowDamageScaling {
         public static bool IsZero(double? x) {
             return Math.Abs(x.GetValueOrDefault(0)) <= zero;
         }
-        public static float EnsureBounds(float? x) {
+        public static float EnsureBounds(double? x) {
             double tmp = x.GetValueOrDefault(0);
             if(IsInfinity(tmp)) {
                 return Math.Sign(tmp) * infinity;
@@ -118,13 +118,14 @@ namespace ArrowDamageScaling {
                             // There is no damage modification
                             return false;
                         }
-                        scaleNonArrowModifyValue.Value *= -1;
+                        scaleAllModifyValue.Value *= Program.settings.ScalingFactor;
+                        scaleNonArrowModifyValue.Value = -scaleAllModifyValue.Value;
                         addedEffects.Add(scaleAll);
                         addedEffects.Add(scaleNonArrow);
                         return true;
                     }
                     case PerkEntryPointModifyValue.ModificationType.Multiply: {
-                        scaleAllModifyValue.Value = EnsureBounds(scaleAllModifyValue.Value);
+                        scaleAllModifyValue.Value = EnsureBounds(Math.Pow(scaleAllModifyValue.Value.GetValueOrDefault(0), Program.settings.ScalingFactor));
                         scaleNonArrowModifyValue.Value = EnsureBounds(1f / scaleNonArrowModifyValue.Value);
                         
                         addedEffects.Add(scaleAll);
@@ -157,7 +158,9 @@ namespace ArrowDamageScaling {
                             // There is no damage modification
                             return false;
                         }
-                        scaleNonArrowModifyActorValue.Value *= -1;
+                        scaleAllModifyActorValue.Value *= Program.settings.ScalingFactor;
+                        scaleNonArrowModifyActorValue.Value = -scaleAllModifyActorValue.Value;
+
                         addedEffects.Add(scaleAll);
                         addedEffects.Add(scaleNonArrow);
                         return true;
@@ -174,7 +177,7 @@ namespace ArrowDamageScaling {
                                 AddActorValueConditions(scaleAllList[i], scaleNonArrowModifyActorValue.ActorValue, thresholds[i], thresholds[i + 1]);
                                 AddActorValueConditions(scaleNonArrowList[i], scaleNonArrowModifyActorValue.ActorValue, thresholds[i], thresholds[i + 1]);
                                 scaleAllList[i].Modification = PerkEntryPointModifyValue.ModificationType.Multiply;
-                                scaleAllList[i].Value = EnsureBounds(actorValues[i] * scaleNonArrowModifyActorValue.Value);
+                                scaleAllList[i].Value = EnsureBounds(Math.Pow(actorValues[i] * scaleNonArrowModifyActorValue.Value, Program.settings.ScalingFactor));
                                 scaleNonArrowList[i].Modification = PerkEntryPointModifyValue.ModificationType.Multiply;
                                 scaleNonArrowList[i].Value = EnsureBounds(1f / scaleAllList[i].Value);
                                 if(!IsZero(scaleAllList[i].Value - 1)) {
@@ -206,7 +209,7 @@ namespace ArrowDamageScaling {
                                 AddActorValueConditions(scaleAllList[i], scaleNonArrowModifyActorValue.ActorValue, thresholds[i], thresholds[i + 1]);
                                 AddActorValueConditions(scaleNonArrowList[i], scaleNonArrowModifyActorValue.ActorValue, thresholds[i], thresholds[i + 1]);
                                 scaleAllList[i].Modification = PerkEntryPointModifyValue.ModificationType.Multiply;
-                                scaleAllList[i].Value = EnsureBounds(1 + actorValues[i] * scaleNonArrowModifyActorValue.Value);
+                                scaleAllList[i].Value = EnsureBounds(Math.Pow(1 + actorValues[i] * scaleNonArrowModifyActorValue.Value, Program.settings.ScalingFactor));
                                 scaleNonArrowList[i].Modification = PerkEntryPointModifyValue.ModificationType.Multiply;
                                 scaleNonArrowList[i].Value = EnsureBounds(1f / scaleAllList[i].Value);
                                 if(!IsZero(scaleAllList[i].Value - 1)) {
@@ -494,12 +497,39 @@ namespace ArrowDamageScaling {
             }
         }
 
+        public static List<string> CheckSettings() {
+            var errorList = new List<string>();
+            if(settings.ScalingFactor < 0) {
+                errorList.Add("ScalingFactor must not be negative.");
+            }
+            if(settings.emulateActorValueEntryPoints.Enabled) {
+                if(settings.emulateActorValueEntryPoints.Accuracy < 1) {
+                    errorList.Add("Accuracy must be at least 1.");
+                }
+                if(settings.emulateActorValueEntryPoints.MaximumActorValue < settings.emulateActorValueEntryPoints.Accuracy) {
+                    errorList.Add("Accuracy cannot be larger than MaximumActorValue");
+                }
+                if(settings.emulateActorValueEntryPoints.SkillScaling < 0) {
+                    errorList.Add("SkillScaling must not be negative.");
+                }
+            }
+            return errorList;
+        }
 
         /// <summary>
         /// Runs the patcher.
         /// </summary>
         /// <param name="state">The Synthesis patcher state.</param>
         public static void RunPatch(IPatcherState<ISkyrimMod, ISkyrimModGetter> state) {
+            var errors = CheckSettings();
+            if(errors.Count > 0) {
+                foreach(var error in errors) {
+                    Console.WriteLine(error);
+                }
+                throw new ArgumentException("At least one of the provided settings was not valid.");
+            }
+
+
             Perk? skillScalingPerk = null;
             List<APerkEntryPointEffect> dummyEffects = new();
 
@@ -563,8 +593,10 @@ namespace ArrowDamageScaling {
             }
 
             // Run main patcher.
-            foreach(var perkGetter in state.LoadOrder.PriorityOrder.Perk().WinningOverrides()) {
-                PatchPerk(state, perkGetter);
+            if(settings.ScalingFactor != 0) {
+                foreach(var perkGetter in state.LoadOrder.PriorityOrder.Perk().WinningOverrides()) {
+                    PatchPerk(state, perkGetter);
+                }
             }
 
             // Remove dummy effects from player only perk.
