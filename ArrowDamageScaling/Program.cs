@@ -59,6 +59,23 @@ namespace ArrowDamageScaling {
             return modifyValue;
         }
 
+        public static bool ActorValueIsSkill(ActorValue av) {
+            if(av >= ActorValue.OneHanded && av <= ActorValue.Enchanting) {
+                return true;
+            }
+
+            if(av >= ActorValue.OneHandedModifier && av <= ActorValue.EnchantingModifier) {
+                return true;
+            }
+
+            if(av >= ActorValue.OneHandedPowerModifier && av <= ActorValue.EnchantingPowerModifier) {
+                return true;
+            }
+
+            return false;
+        }
+
+
         /// <summary>
         /// Adds actor value conditions (x <= AV < y), so that the perk entry point only applies if the owner's actor value is within a certain range.
         /// </summary>
@@ -167,7 +184,7 @@ namespace ArrowDamageScaling {
                     }
                     case PerkEntryPointModifyActorValue.ModificationType.MultiplyAVMult: {
                         // emulate
-                        if(emulate) {
+                        if(emulate && ActorValueIsSkill(scaleNonArrowModifyActorValue.ActorValue)) {
                             var scaleAllList = new PerkEntryPointModifyValue[numEntryPoints];
                             var scaleNonArrowList = new PerkEntryPointModifyValue[numEntryPoints];
 
@@ -199,7 +216,7 @@ namespace ArrowDamageScaling {
                             return false;
                         }
                         // emulate
-                        if(emulate) {
+                        if(emulate && ActorValueIsSkill(scaleNonArrowModifyActorValue.ActorValue)) {
                             var scaleAllList = new PerkEntryPointModifyValue[numEntryPoints];
                             var scaleNonArrowList = new PerkEntryPointModifyValue[numEntryPoints];
 
