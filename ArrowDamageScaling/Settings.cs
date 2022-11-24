@@ -23,22 +23,18 @@ namespace ArrowDamageScaling {
     }
 
     public class Balancing {
-        [SynthesisTooltip("Additive modifier for arrow damage applied before all other modifiers.")]
-        public float arrowDamageOffset = 0f;
-        [SynthesisTooltip("Multiplicative modifier for arrow damage.")]
-        public float arrowDamageFactor = 1f;
-        [SynthesisTooltip("Additive modifier for bow damage applied before all other modifiers.")]
-        public float bowDamageOffset = 0f;
-        [SynthesisTooltip("Multiplicative modifier for bow damage.")]
-        public float bowDamageFactor = 1f;
+        [SynthesisTooltip("Additive modifier for archery damage.")]
+        public float archeryDamageOffset = 0f;
+        [SynthesisTooltip("Multiplicative modifier for archery damage.")]
+        public float archeryDamageFactor = 1f;
     }
 
     public class Settings {
-        [SynthesisTooltip("Arrow damage is only modified for the player.")]
-        public bool PlayerOnly = true;
+        // As this is only a UI bug, only player needs to be affected
+        public bool PlayerOnly => true;
 
-        [SynthesisTooltip("How much arrow damage is scaled relative to bow damage. 1.0 means same scaling. 0.5 means, if bow damage is multiplied by 4, arrow damage is only multiplied by 2.")]
-        public float ScalingFactor = 1.0f;
+        // As this is only a UI bug, scaling must be equal to the true scaling
+        public float ScalingFactor => 1.0f;
 
         public EmulateActorValueEntryPoints emulateActorValueEntryPoints = new();
 

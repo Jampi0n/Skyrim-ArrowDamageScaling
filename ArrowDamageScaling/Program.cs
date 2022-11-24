@@ -131,15 +131,7 @@ namespace ArrowDamageScaling {
             if(scaleNonArrow is PerkEntryPointModifyValue scaleNonArrowModifyValue && scaleAll is PerkEntryPointModifyValue scaleAllModifyValue) {
                 switch(scaleNonArrowModifyValue.Modification) {
                     case PerkEntryPointModifyValue.ModificationType.Add: {
-                        if(IsZero(scaleNonArrowModifyValue.Value)) {
-                            // There is no damage modification
-                            return false;
-                        }
-                        scaleAllModifyValue.Value *= Program.settings.ScalingFactor;
-                        scaleNonArrowModifyValue.Value = -scaleAllModifyValue.Value;
-                        addedEffects.Add(scaleAll);
-                        addedEffects.Add(scaleNonArrow);
-                        return true;
+                        return false;
                     }
                     case PerkEntryPointModifyValue.ModificationType.Multiply: {
                         scaleAllModifyValue.Value = EnsureBounds(Math.Pow(scaleAllModifyValue.Value.GetValueOrDefault(0), Program.settings.ScalingFactor));
@@ -171,16 +163,7 @@ namespace ArrowDamageScaling {
             if(scaleNonArrow is PerkEntryPointModifyActorValue scaleNonArrowModifyActorValue && scaleAll is PerkEntryPointModifyActorValue scaleAllModifyActorValue) {
                 switch(scaleNonArrowModifyActorValue.Modification) {
                     case PerkEntryPointModifyActorValue.ModificationType.AddAVMult: {
-                        if(IsZero(scaleNonArrowModifyActorValue.Value)) {
-                            // There is no damage modification
-                            return false;
-                        }
-                        scaleAllModifyActorValue.Value *= Program.settings.ScalingFactor;
-                        scaleNonArrowModifyActorValue.Value = -scaleAllModifyActorValue.Value;
-
-                        addedEffects.Add(scaleAll);
-                        addedEffects.Add(scaleNonArrow);
-                        return true;
+                        return false;
                     }
                     case PerkEntryPointModifyActorValue.ModificationType.MultiplyAVMult: {
                         // emulate
@@ -573,34 +556,6 @@ namespace ArrowDamageScaling {
                 });
             }
 
-            /*
-             * Factor for arrow damage.
-             */
-            if(settings.balancing.arrowDamageFactor != 1f) {
-                dummyEffects.Add(new PerkEntryPointModifyValue() {
-                    EntryPoint = APerkEntryPointEffect.EntryType.ModAttackDamage,
-                    Modification = PerkEntryPointModifyValue.ModificationType.Multiply,
-                    Priority = 0,
-                    Rank = 0,
-                    PerkConditionTabCount = 3,
-                    Value = settings.balancing.arrowDamageFactor
-                });
-            }
-
-            /*
-             * Initial offset for arrow damage.
-             */
-            if(settings.balancing.arrowDamageOffset != 0f) {
-                dummyEffects.Add(new PerkEntryPointModifyValue() {
-                    EntryPoint = APerkEntryPointEffect.EntryType.ModAttackDamage,
-                    Modification = PerkEntryPointModifyValue.ModificationType.Add,
-                    Priority = 255,
-                    Rank = 0,
-                    PerkConditionTabCount = 3,
-                    Value = settings.balancing.arrowDamageOffset
-                });
-            }
-
             // Add dummy effects to player only perk.
             if(dummyEffects.Count > 0) {
                 skillScalingPerk = state.PatchMod.Perks.GetOrAddAsOverride(playerPerk.Resolve(state.LinkCache));
@@ -609,29 +564,17 @@ namespace ArrowDamageScaling {
                 }
             }
 
-            // Run main patcher.
-            if(settings.ScalingFactor != 0) {
-                foreach(var perkGetter in state.LoadOrder.PriorityOrder.Perk().WinningOverrides()) {
-                    PatchPerk(state, perkGetter);
-                }
-            }
-
-            // Remove dummy effects from player only perk.
-            foreach(var effect in dummyEffects) {
-                skillScalingPerk!.Effects.Remove(effect);
-            }
-
             /*
              * Factor for bow damage.
              */
-            if(settings.balancing.bowDamageFactor != 1f) {
+            if(settings.balancing.archeryDamageFactor != 1f) {
                 var entryPoint = new PerkEntryPointModifyValue() {
                     EntryPoint = APerkEntryPointEffect.EntryType.ModAttackDamage,
                     Modification = PerkEntryPointModifyValue.ModificationType.Multiply,
                     Priority = 0,
                     Rank = 0,
                     PerkConditionTabCount = 3,
-                    Value = settings.balancing.bowDamageFactor
+                    Value = settings.balancing.archeryDamageFactor
                 };
                 if(settings.PlayerOnly) {
                     AddPlayerCondition(entryPoint);
@@ -657,14 +600,14 @@ namespace ArrowDamageScaling {
             /*
              * Initial offset for bow damage.
              */
-            if(settings.balancing.bowDamageOffset != 0f) {
+            if(settings.balancing.archeryDamageOffset != 0f) {
                 var entryPoint = new PerkEntryPointModifyValue() {
                     EntryPoint = APerkEntryPointEffect.EntryType.ModAttackDamage,
                     Modification = PerkEntryPointModifyValue.ModificationType.Add,
                     Priority = 255,
                     Rank = 0,
                     PerkConditionTabCount = 3,
-                    Value = settings.balancing.bowDamageOffset
+                    Value = settings.balancing.archeryDamageOffset
                 };
                 if(settings.PlayerOnly) {
                     AddPlayerCondition(entryPoint);
@@ -685,6 +628,18 @@ namespace ArrowDamageScaling {
                 });
                 skillScalingPerk = state.PatchMod.Perks.GetOrAddAsOverride(playerPerk.Resolve(state.LinkCache));
                 skillScalingPerk.Effects.Add(entryPoint);
+            }
+
+            // Run main patcher.
+            if(settings.ScalingFactor != 0) {
+                foreach(var perkGetter in state.LoadOrder.PriorityOrder.Perk().WinningOverrides()) {
+                    PatchPerk(state, perkGetter);
+                }
+            }
+
+            // Remove dummy effects from player only perk.
+            foreach(var effect in dummyEffects) {
+                skillScalingPerk!.Effects.Remove(effect);
             }
         }
     }
