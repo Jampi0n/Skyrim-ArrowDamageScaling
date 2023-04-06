@@ -99,9 +99,8 @@ namespace ArrowDamageScaling {
                 perkCond.Conditions.Insert(0, new ConditionFloat() {
                     CompareOperator = CompareOperator.GreaterThanOrEqualTo,
                     ComparisonValue = min - 0.5f,
-                    Data = new FunctionConditionData() {
-                        Function = Condition.Function.GetActorValue,
-                        ParameterOneNumber = (int)actorValue,
+                    Data = new GetActorValueConditionData() {
+                        ActorValue = actorValue,
                         RunOnType = Condition.RunOnType.Subject
                     }
                 });
@@ -111,9 +110,8 @@ namespace ArrowDamageScaling {
                 perkCond.Conditions.Insert(0, new ConditionFloat() {
                     CompareOperator = CompareOperator.LessThan,
                     ComparisonValue = max - 0.5f,
-                    Data = new FunctionConditionData() {
-                        Function = Condition.Function.GetActorValue,
-                        ParameterOneNumber = (int)actorValue,
+                    Data = new GetActorValueConditionData() {
+                        ActorValue = actorValue,
                         RunOnType = Condition.RunOnType.Subject
                     }
                 });
@@ -257,9 +255,10 @@ namespace ArrowDamageScaling {
         public static bool AffectsBowDamage(Condition condition) {
             // Only the HasKeyword condition in combination with the WeapTypeBow keyword is supported.
             if(condition is ConditionFloat conditionFloat) {
-                if(conditionFloat.Data is FunctionConditionData functionConditionData) {
-                    if(functionConditionData.Function == Condition.Function.HasKeyword && functionConditionData.RunOnType == Condition.RunOnType.Subject) {
-                        if(functionConditionData.ParameterOneRecord.FormKey == Skyrim.Keyword.WeapTypeBow.FormKey) {
+                if(conditionFloat.Data is IHasKeywordConditionData hasKeywordData) {
+                    if(hasKeywordData.RunOnType == Condition.RunOnType.Subject)
+                    {
+                        if(Skyrim.Keyword.WeapTypeBow.Equals(hasKeywordData.Keyword.Link)) {
                             if(conditionFloat.CompareOperator == CompareOperator.EqualTo && conditionFloat.ComparisonValue == 1f) {
                                 return true;
                             }
@@ -370,9 +369,8 @@ namespace ArrowDamageScaling {
             perkCond.Conditions.Insert(0, new ConditionFloat() {
                 CompareOperator = CompareOperator.EqualTo,
                 ComparisonValue = 1f,
-                Data = new FunctionConditionData() {
-                    Function = Condition.Function.HasKeyword,
-                    ParameterOneRecord = Skyrim.Keyword.PlayerKeyword,
+                Data = new HasKeywordConditionData() {
+                    Reference = Skyrim.Keyword.PlayerKeyword,
                     RunOnType = Condition.RunOnType.Subject
                 }
             });
@@ -405,18 +403,16 @@ namespace ArrowDamageScaling {
                 CompareOperator = CompareOperator.EqualTo,
                 ComparisonValue = 0f,
                 Flags = Condition.Flag.OR,
-                Data = new FunctionConditionData() {
-                    Function = Condition.Function.HasKeyword,
-                    ParameterOneRecord = Skyrim.Keyword.ActivatorLever,
+                Data = new HasKeywordConditionData() {
+                    Reference = Skyrim.Keyword.ActivatorLever,
                     RunOnType = Condition.RunOnType.Subject
                 }
             });
             perkCond.Conditions.Add(new ConditionFloat() {
                 CompareOperator = CompareOperator.NotEqualTo,
                 ComparisonValue = 0f,
-                Data = new FunctionConditionData() {
-                    Function = Condition.Function.HasKeyword,
-                    ParameterOneRecord = Skyrim.Keyword.ActivatorLever,
+                Data = new HasKeywordConditionData() {
+                    Reference = Skyrim.Keyword.ActivatorLever,
                     RunOnType = Condition.RunOnType.Subject
                 }
             });
@@ -585,9 +581,8 @@ namespace ArrowDamageScaling {
                         new ConditionFloat() {
                             CompareOperator = CompareOperator.EqualTo,
                             ComparisonValue = 1f,
-                            Data = new FunctionConditionData() {
-                                Function = Condition.Function.HasKeyword,
-                                ParameterOneRecord = Skyrim.Keyword.WeapTypeBow,
+                            Data = new HasKeywordConditionData() {
+                                Reference = Skyrim.Keyword.WeapTypeBow,
                                 RunOnType = Condition.RunOnType.Subject
                             }
                         }
@@ -618,9 +613,8 @@ namespace ArrowDamageScaling {
                         new ConditionFloat() {
                             CompareOperator = CompareOperator.EqualTo,
                             ComparisonValue = 1f,
-                            Data = new FunctionConditionData() {
-                                Function = Condition.Function.HasKeyword,
-                                ParameterOneRecord = Skyrim.Keyword.WeapTypeBow,
+                            Data = new HasKeywordConditionData() {
+                                Reference = Skyrim.Keyword.WeapTypeBow,
                                 RunOnType = Condition.RunOnType.Subject
                             }
                         }
